@@ -2,9 +2,11 @@
 
 import json
 import urllib
+import goslate
+
 from bs4 import BeautifulSoup
 
-g_main_uri = "https://wikileaks.org/hackingteam/emails"
+g_main_uri = "https://wikileaks.org"
 
 def get_mail_list_from_wikileak_search_url(search_url):
     soup2 = BeautifulSoup( urllib.urlopen(search_url), 'html.parser', from_encoding='utf-8')
@@ -48,7 +50,7 @@ def get_mail_list( url, max_result):
 
     email_list = []
     for index in range(0, max_result+50, 50):
-        url_to_extract_mails = g_main_uri +search_url+str(index)
+        url_to_extract_mails = g_main_uri+"/hackingteam/emails"+search_url+str(index)
         print "Processing url: "+ url_to_extract_mails
 
         # Crawl e-mail lists.
@@ -72,6 +74,35 @@ def get_mail_list( url, max_result):
     return filtered_email_list
 
 
+def write_mail_contents_in_JSON(url):
+    html_doc = urllib.urlopen(url)
+    soup = BeautifulSoup(html_doc, 'html.parser', from_encoding='utf-8')
+
+    mail_data = {}
+
+    # Parse e-mail info table.
+    table_data = soup.table.find_all('td')
+
+    mail_data["email-id"] =table_data[0].get_text()
+    mail_data["date"] = table_data[1].get_text()
+    mail_data["from"] = table_data[2].get_text()
+    mail_data["to"] = table_data[3].get_text()
+
+    # Get contents in Italian.
+    contents = soup.find("div", {"id": "uniquer"}).get_text()
+
+    # Remove mail signature.
+    sig1 = "This message is a PRIVATE communication. This message contains privileged and confidential information intended only for the use of the addressee(s)."
+    sig2 = "If you are not the intended recipient, you are hereby notified that any dissemination, disclosure, copying, distribution or use of the information contained in this message is strictly prohibited. If you received this email in error or without authorization, please notify the sender of the delivery error by replying to this message, and then delete it from your system."
+    mail_data["contents_it"] = contents.replace(sig1,"").replace(sig2,"")
+
+    # Translate in English
+    gs = goslate.Goslate()
+    mail_data["contents_en"] = gs.translate( mail_data["contents_it"], "en" )
+
+    return mail_data
+
+
 def main_proc():
     # Search URL with Korea and Devilangel
     search_url = "https://wikileaks.org/hackingteam/emails?q=Korea+%7C+deviangel&mfrom=&mto=&title=&notitle=&date=&nofrom=&noto=&count=1000&sort=0#searchresult"
@@ -93,9 +124,15 @@ def main_proc():
 
 
 if __name__ == "__main__":
-    main_proc()
+    # main_proc()
 
+    contents = write_mail_contents_in_JSON( g_main_uri+"/hackingteam/emails/emailid/440594" )
 
+    print contents
+    # Save it as JSON file
+    f = open("an_email.json", 'w')
+    f.write( json.dumps( contents ) )
+    f.close()
 
 
 
