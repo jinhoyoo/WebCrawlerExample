@@ -3,6 +3,7 @@
 import json
 import urllib
 import goslate
+import os
 
 from bs4 import BeautifulSoup
 
@@ -120,19 +121,21 @@ def main_proc():
     f.write( json.dumps(data) )
     f.close()
 
-    print email_list
+    # Parse e-mails and dump them in folder.
+    if not os.path.exists('mails'):
+        os.makedirs('mails')
+
+    for elem in email_list:
+        email_url = g_main_uri+ elem
+        print 'Parse e-mail:'+ email_url
+        contents = write_mail_contents_in_JSON(email_url)
+
+        # Save it as JSON file
+        file_name = contents["email-id"]+".json"
+        f = open("mails/"+file_name, 'w')
+        f.write( json.dumps( contents ) )
+        f.close()
 
 
 if __name__ == "__main__":
-    # main_proc()
-
-    contents = write_mail_contents_in_JSON( g_main_uri+"/hackingteam/emails/emailid/440594" )
-
-    print contents
-    # Save it as JSON file
-    f = open("an_email.json", 'w')
-    f.write( json.dumps( contents ) )
-    f.close()
-
-
-
+    main_proc()
