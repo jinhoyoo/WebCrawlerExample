@@ -1,8 +1,10 @@
 #-*- coding: utf-8 -*-
 
+import json
 import urllib
 from bs4 import BeautifulSoup
 
+g_main_uri = "https://wikileaks.org/hackingteam/emails"
 
 def get_mail_list_from_wikileak_search_url(search_url):
     soup2 = BeautifulSoup( urllib.urlopen(search_url), 'html.parser', from_encoding='utf-8')
@@ -44,10 +46,9 @@ def get_mail_list( url, max_result):
     f = open("email_list_temp.json", 'w')
     f.write( " { \"email_list\" : [ ")
 
-
     email_list = []
     for index in range(0, max_result+50, 50):
-        url_to_extract_mails = "https://wikileaks.org/hackingteam/emails"+search_url+str(index)
+        url_to_extract_mails = g_main_uri +search_url+str(index)
         print "Processing url: "+ url_to_extract_mails
 
         # Crawl e-mail lists.
@@ -65,31 +66,36 @@ def get_mail_list( url, max_result):
     f.write( "] }")
     f.close()
 
-    # Filter out redundency mail list.
+    # Filter out redundancy mail list.
     filtered_email_list = list(set(email_list))
-
-    #Save it in the file.
-    f = open("email_list.json", 'w')
-    f.write( " { \"email_list\" : [ ")
-    for elem in filtered_email_list:
-        f.write( "\""+elem+"\",\n")
-    f.write( "] }")
-    f.close()
 
     return filtered_email_list
 
 
-if __name__ == "__main__":
-
+def main_proc():
     # Search URL with Korea and Devilangel
     search_url = "https://wikileaks.org/hackingteam/emails?q=Korea+%7C+deviangel&mfrom=&mto=&title=&notitle=&date=&nofrom=&noto=&count=1000&sort=0#searchresult"
 
     # Estimated max result
     max_result = 2000
 
-    # get mail list from given search URL result.
+    # Get mail list from given search URL result.
     email_list = get_mail_list( search_url, max_result )
 
+    # Save it as JSON file
+    data = {'email_list':email_list,
+            'queried_url':search_url}
+    f = open("email_list.json", 'w')
+    f.write( json.dumps(data) )
+    f.close()
+
     print email_list
+
+
+if __name__ == "__main__":
+    main_proc()
+
+
+
 
 
