@@ -4,6 +4,7 @@ import json
 import urllib
 import goslate
 import os
+import HTMLParser
 
 from bs4 import BeautifulSoup
 
@@ -77,7 +78,10 @@ def get_mail_list( url, max_result):
 
 def write_mail_contents_in_JSON(url):
     html_doc = urllib.urlopen(url)
-    soup = BeautifulSoup(html_doc, 'html.parser', from_encoding='utf-8')
+    soup = BeautifulSoup(html_doc,
+                         'html.parser',
+                         from_encoding='utf-8'
+                         )
 
     mail_data = {}
 
@@ -90,16 +94,25 @@ def write_mail_contents_in_JSON(url):
     mail_data["to"] = table_data[3].get_text()
 
     # Get contents in Italian.
-    contents = soup.find("div", {"id": "uniquer"}).get_text()
+    contents = soup.find("div", {"id": "uniquer"}).get_text().encode("ascii", "ignore").replace("\n", ' ')
+    contents = contents.replace("."," ").replace(","," ").replace("'"," ").replace("\""," ").replace("\\"," ")
 
     # Remove mail signature.
     sig1 = "This message is a PRIVATE communication. This message contains privileged and confidential information intended only for the use of the addressee(s)."
     sig2 = "If you are not the intended recipient, you are hereby notified that any dissemination, disclosure, copying, distribution or use of the information contained in this message is strictly prohibited. If you received this email in error or without authorization, please notify the sender of the delivery error by replying to this message, and then delete it from your system."
-    mail_data["contents_it"] = contents.replace(sig1,"").replace(sig2,"")
+    sig3 = "The information contained in this e-mail message is confidential and intended only for the use of the individual or entity named above.If you are not the intended recipient, please notify us immediately by telephone or e-mail and destroy this communication. Due to the way of the transmission, we do not undertake any liability with respect to the secrecy and confidentiality of the information contained in this e-mail message"
+    sig4="Best regards"
+
+    filted_contents = contents.replace(sig1, " ").replace(sig2, " ").replace(sig3, " ").replace(sig4, " ")
+
+    # Convert unicode to common text.
+    h = HTMLParser.HTMLParser()
+    mail_data["contents_it"] = h.unescape(filted_contents)
+
 
     # Translate in English
     gs = goslate.Goslate()
-    mail_data["contents_en"] = gs.translate( mail_data["contents_it"], "en" )
+    mail_data["contents_en"] = gs.translate(mail_data["contents_it"], "en" )
 
     return mail_data
 
@@ -127,7 +140,7 @@ def main_proc():
 
     for elem in email_list:
         email_url = g_main_uri+ elem
-        print 'Parse e-mail:'+ email_url
+        print 'Parsing e-mail:'+ email_url
         contents = write_mail_contents_in_JSON(email_url)
 
         # Save it as JSON file
